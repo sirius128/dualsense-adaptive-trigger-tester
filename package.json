@@ -1,0 +1,20 @@
+{
+  "name": "dualsense-adaptive-trigger-tester",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser tool for testing DualSense adaptive trigger effects over USB",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "check": "bun scripts/check-effects.ts"
+  },
+  "devDependencies": {
+    "@types/w3c-web-hid": "^1.0.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}
