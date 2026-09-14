@@ -40,6 +40,12 @@ export function notesFor(eff: EffectDef, block: Uint8Array): [NoteClass, Localiz
       "Found by reverse engineering, not in the official SDK. It is described as a firmware leftover, so its behaviour may change between versions and <b>a future update may remove it entirely</b>.",
     )]);
 
+  if (eff.type === 0x22 && (block[2]! & 0x02) !== 0)
+    out.push(["", L(
+      "終了ゾーン <b>9</b> は、バイト配置の出典（Nielk1）が挙げている範囲（0–8）の外側です。実機のゲームがこのマスク（<code>01 02</code> = ゾーン 0 と 9）を書いて動作しているのを確認しているため、ここでも選べるようにしてあります。",
+      "End zone <b>9</b> lies outside the 0–8 range given by the byte-layout source (Nielk1). A shipping title was observed writing this very mask (<code>01 02</code> = zones 0 and 9) and the effect worked on hardware, so it is offered here.",
+    )]);
+
   if (eff.type === 0x23)
     out.push(["", L(
       "グラフは振動する範囲だけを示しています。実際には 2 拍のリズムで叩くので、波形は上下に脈打ちます。",

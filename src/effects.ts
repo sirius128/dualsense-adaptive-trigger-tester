@@ -111,7 +111,7 @@ export const EFFECTS: EffectDef[] = [
     params: [],
     zoneParam: { k: "strengths", label: L("ゾーン別の強さ", "Per-zone strength"), max: 8, def: [0, 0, 3, 5, 7, 8, 6, 4, 2, 0] },
     bl: lb(...ZONE_LB),
-    build: (p) => blk(0x21, ...fromArray(p.strengths)),
+    build: (p) => (p.strengths.some((v) => v > 0) ? blk(0x21, ...fromArray(p.strengths)) : OFF()),
     native: (p) => P("resist", (t) => (p.strengths[zoneIndex(t)] ?? 0) / 8),
   }),
 
@@ -147,7 +147,10 @@ export const EFFECTS: EffectDef[] = [
     params: [{ k: "frequency", label: L("周波数", "Frequency"), min: 0, max: 255, def: 35, hint: "Hz 0–255" }],
     zoneParam: { k: "amps", label: L("ゾーン別の振幅", "Per-zone amplitude"), max: 8, def: [8, 6, 4, 2, 0, 0, 2, 4, 6, 8] },
     bl: lb(...ZONE_LB, NONE, NONE, BL.freq),
-    build: (p) => blk(0x26, ...fromArray(p.amps), 0, 0, p.frequency),
+    build: (p) =>
+      p.frequency === 0 || !p.amps.some((v) => v > 0)
+        ? OFF()
+        : blk(0x26, ...fromArray(p.amps), 0, 0, p.frequency),
     native: (p) => P("vibe", (t) => (p.amps[zoneIndex(t)] ?? 0) / 8),
   }),
 
@@ -160,12 +163,12 @@ export const EFFECTS: EffectDef[] = [
     ),
     params: [
       { k: "start", label: L("開始ゾーン", "Start zone"), min: 0, max: 8, def: 1, hint: "zone 0–8" },
-      { k: "end", label: L("終了ゾーン", "End zone"), min: 1, max: 8, def: 6, hint: "zone start+1–8" },
+      { k: "end", label: L("終了ゾーン", "End zone"), min: 1, max: 9, def: 6, hint: "zone start+1–9" },
       { k: "strength", label: L("引きの強さ", "Draw strength"), min: 0, max: 8, def: 3, hint: "0–8" },
       { k: "snapForce", label: L("弾ける力", "Snap force"), min: 0, max: 8, def: 8, hint: "0–8" },
     ],
     bl: lb(BL.maskLo, BL.maskHi, BL.strSnap),
-    fix: (p) => { if (p.end <= p.start) p.end = Math.min(8, p.start + 1); },
+    fix: (p) => { if (p.end <= p.start) p.end = Math.min(9, p.start + 1); },
     build: (p) =>
       p.strength === 0 || p.snapForce === 0
         ? OFF()
