@@ -11,6 +11,10 @@ export interface Events {
   effect: void;
   /** 実機のトリガー位置が動いた / the physical trigger moved */
   trigger: number | null;
+  /** コントローラーに接続した / a controller was connected */
+  device: HIDDevice | null;
+  /** 音声ハプティックを鳴らす直前 / about to play audio haptics */
+  haptics: void;
 }
 
 type Handler<K extends keyof Events> = (payload: Events[K]) => void;

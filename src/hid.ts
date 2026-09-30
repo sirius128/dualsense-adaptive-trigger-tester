@@ -2,7 +2,7 @@
  * 実機への書き込み（WebHID）。
  * 出力レポートの構造は Linux カーネルの hid-playstation.c に準拠。
  */
-import { on } from "./bus";
+import { emit, on } from "./bus";
 import { $ } from "./dom";
 import { t } from "./i18n";
 import { OFF } from "./payload";
@@ -41,7 +41,8 @@ function crc32(bytes: Bytes): number {
 let btSeq = 0;
 
 interface Extras {
-  rumble?: number;
+  /** [左モーター, 右モーター] 0..255 / [left motor, right motor] */
+  rumble?: [number, number];
   rgb?: [number, number, number];
 }
 
@@ -57,10 +58,12 @@ function commonBlock(block: Bytes | null, opts?: Extras): Bytes {
     if (doR) c.set(block, 10);
     if (doL) c.set(block, 21);
   }
-  if (opts?.rumble != null) {
+  // 振動を止めるときは 0 を書くのではなくフラグごと落とす。
+  // HAPTICS_SELECT が立ったままだと、音声ハプティック（ch3/ch4）が鳴らなくなる（SDL_hidapi_ps5.c と同じ扱い）
+  if (opts?.rumble && (opts.rumble[0] || opts.rumble[1])) {
     c[0] |= F0_VIBRATION | F0_HAPTICS_SELECT;
-    c[2] = opts.rumble;
-    c[3] = opts.rumble;
+    // motor_right が offset 2、motor_left が offset 3
+    [c[3], c[2]] = opts.rumble;
   }
   if (opts?.rgb) {
     c[1] |= F1_LIGHTBAR;
@@ -173,7 +176,7 @@ const autoSendOn = (): boolean => $<HTMLInputElement>("autoSend").checked;
 
 /* ---- ドックの状態 / dock state ---- */
 function setConnectedUI(dev: HIDDevice | null): void {
-  for (const id of ["sendBtn", "offBtn", "pingBtn"]) $<HTMLButtonElement>(id).disabled = !dev;
+  for (const id of ["sendBtn", "offBtn", "pingBtn", ...RUMBLE_BTNS]) $<HTMLButtonElement>(id).disabled = !dev;
   $("step1").className = `step${dev ? " done" : " now"}`;
   $("step2").className = `step${dev ? " done" : ""}`;
   $("step3").className = `step${dev ? " now" : ""}`;
@@ -209,6 +212,76 @@ function setLink(l: Link): void {
   $("linkChip").textContent = l === "usb" ? "USB" : "Bluetooth";
 }
 
+/* ---- 振動テスト / rumble test ---- */
+type Motor = "L" | "R" | "B";
+const RUMBLE_BTNS = ["rumbleL", "rumbleR", "rumbleB", "rumbleStop"];
+
+let rumbleMotor: Motor | null = null;
+let rumbleTimer: ReturnType<typeof setTimeout> | undefined;
+
+const rumbleStrength = (): number => Number($<HTMLInputElement>("rumbleStrength").value);
+const rumbleDuration = (): number => Number($<HTMLInputElement>("rumbleDur").value);
+const rumbleHold = (): boolean => $<HTMLInputElement>("rumbleHold").checked;
+
+function paintRumble(): void {
+  for (const m of ["L", "R", "B"] as const) {
+    $(`rumble${m}`).setAttribute("aria-pressed", String(rumbleMotor === m));
+  }
+}
+
+function sendRumble(m: Motor): Promise<void> {
+  const v = rumbleStrength();
+  const pair: [number, number] = [m === "R" ? 0 : v, m === "L" ? 0 : v];
+  return writeOut(commonBlock(null, { rumble: pair }), () => t("send.rumble", t(`rumble.${m}`), v));
+}
+
+/** 振動を止めた扱いにする（実機へは送らない） */
+function clearRumble(): void {
+  clearTimeout(rumbleTimer);
+  rumbleMotor = null;
+  paintRumble();
+}
+
+function stopRumble(): void {
+  clearRumble();
+  if (store.device) void writeOut(commonBlock(null, { rumble: [0, 0] }), () => t("send.rumbleStop"));
+}
+
+function startRumble(m: Motor): void {
+  clearTimeout(rumbleTimer);
+  rumbleMotor = m;
+  paintRumble();
+  void sendRumble(m);
+  if (!rumbleHold()) rumbleTimer = setTimeout(stopRumble, rumbleDuration());
+}
+
+function initRumble(): void {
+  const strength = $<HTMLInputElement>("rumbleStrength");
+  const dur = $<HTMLInputElement>("rumbleDur");
+  const hold = $<HTMLInputElement>("rumbleHold");
+
+  for (const m of ["L", "R", "B"] as const) {
+    $(`rumble${m}`).addEventListener("click", () => startRumble(m));
+  }
+  $("rumbleStop").addEventListener("click", stopRumble);
+
+  // 鳴っている最中に強さを変えたら、その場で送り直す
+  strength.addEventListener("input", () => {
+    $("rumbleStrengthOut").textContent = strength.value;
+    if (rumbleMotor) void sendRumble(rumbleMotor);
+  });
+  dur.addEventListener("input", () => {
+    $("rumbleDurOut").textContent = dur.value;
+  });
+  // 連続を外したら、そこから時間どおりに止める
+  hold.addEventListener("change", () => {
+    dur.disabled = hold.checked;
+    if (!rumbleMotor) return;
+    clearTimeout(rumbleTimer);
+    if (!hold.checked) rumbleTimer = setTimeout(stopRumble, rumbleDuration());
+  });
+}
+
 /* ---- 接続 / connecting ---- */
 async function connect(): Promise<void> {
   try {
@@ -227,6 +300,7 @@ async function connect(): Promise<void> {
     const name = dev.productName || "DualSense";
     const ids = [...store.reportIds].map(hex2).join(", ");
     setConnectedUI(dev);
+    emit("device", dev);
     setStatus(() => name);
     setLog(() => [t("log.connected", name), t("log.outputs", ids || t("log.outputsNone")), t("log.tryTest")]);
     if (autoSendOn()) void sendEffect();
@@ -258,9 +332,11 @@ export function initHID(): void {
 
   // ライトバーと振動で、出力が届いているかを確かめる
   $("pingBtn").addEventListener("click", async () => {
-    await writeOut(commonBlock(null, { rumble: 120, rgb: [0, 90, 255] }), () => t("send.ping"));
+    // 終わりに振動を 0 に戻すので、振動テスト中ならそれも止まる
+    clearRumble();
+    await writeOut(commonBlock(null, { rumble: [120, 120], rgb: [0, 90, 255] }), () => t("send.ping"));
     setTimeout(() => {
-      void writeOut(commonBlock(store.currentBlock, { rumble: 0, rgb: [0, 0, 0] }), () => t("send.pingEnd"));
+      void writeOut(commonBlock(store.currentBlock, { rumble: [0, 0], rgb: [0, 0, 0] }), () => t("send.pingEnd"));
     }, 450);
   });
 
@@ -280,6 +356,14 @@ export function initHID(): void {
     }
   });
 
+  initRumble();
+
+  // 音声ハプティックの前に、振動エミュレーションを解除したレポートを送る
+  on("haptics", () => {
+    clearRumble();
+    void writeOut(commonBlock(null), () => t("send.hapticsOn"));
+  });
+
   $("autoSend").addEventListener("change", () => {
     if (autoSendOn() && store.device) void sendEffect();
   });
@@ -296,15 +380,16 @@ export function initHID(): void {
     setConnectedUI(store.device);
   });
 
-  // ページを閉じるときはトリガーを戻しておく
+  // ページを閉じるときはトリガーと振動を戻しておく
   window.addEventListener("pagehide", () => {
     const dev = store.device;
     if (!dev) return;
+    clearRumble();
     const save = store.side;
     store.side = "B";
     const id = store.link === "usb" ? USB_REPORT : BT_REPORT;
     try {
-      void dev.sendReport(id, wrapReport(commonBlock(OFF()), id));
+      void dev.sendReport(id, wrapReport(commonBlock(OFF(), { rumble: [0, 0] }), id));
     } catch {
       /* 閉じる途中なので失敗しても何もできない / nothing to do while unloading */
     }

@@ -206,11 +206,16 @@ details.tips .tips-body{padding:11px 13px; display:grid; gap:9px}
   border:1px solid var(--line); border-radius:5px; padding:2px 6px;
 }
 input[type=range]{width:100%; accent-color:var(--accent); min-width:0}
+input[type=range]:disabled{opacity:.42}
+.param select{
+  font:inherit; font-size:12.5px; color:var(--ink); background:var(--surface-2);
+  border:1px solid var(--line-strong); border-radius:6px; padding:4px 6px; min-width:0; justify-self:start;
+}
 @media (max-width:520px){
   .param,:root[lang="en"] .param{grid-template-columns:1fr 56px; gap:6px 10px}
   .param label{grid-column:1; grid-row:1}
   .param output{grid-column:2; grid-row:1}
-  .param input[type=range]{grid-column:1/-1; grid-row:2}
+  .param input[type=range],.param select{grid-column:1/-1; grid-row:2}
   .param .hint{grid-column:1/-1; grid-row:3}
 }
 .zones{display:grid; grid-template-columns:repeat(10,1fr); gap:6px}

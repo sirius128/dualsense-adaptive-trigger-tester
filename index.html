@@ -158,6 +158,101 @@
 
       <section class="panel">
         <div class="panel-head">
+          <h2 data-i18n="rumble.head"></h2>
+          <span class="chip mono" data-i18n="rumble.chip"></span>
+        </div>
+        <div class="panel-body" style="display:grid; gap:14px">
+          <p class="note" data-i18n-html="rumble.desc"></p>
+          <div class="params">
+            <div class="param">
+              <label for="rumbleStrength" data-i18n="rumble.strength"></label>
+              <input type="range" id="rumbleStrength" min="1" max="255" step="1" value="160">
+              <output id="rumbleStrengthOut">160</output>
+              <span class="hint">1–255</span>
+            </div>
+            <div class="param">
+              <label for="rumbleDur" data-i18n="rumble.duration"></label>
+              <input type="range" id="rumbleDur" min="100" max="3000" step="100" value="1000">
+              <output id="rumbleDurOut">1000</output>
+              <span class="hint">ms</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="seg" role="group" data-i18n-aria="rumble.head">
+              <button type="button" id="rumbleL" aria-pressed="false" data-i18n="rumble.L" disabled></button>
+              <button type="button" id="rumbleR" aria-pressed="false" data-i18n="rumble.R" disabled></button>
+              <button type="button" id="rumbleB" aria-pressed="false" data-i18n="rumble.B" disabled></button>
+            </div>
+            <button type="button" class="btn" id="rumbleStop" data-i18n="rumble.stop" disabled></button>
+            <label class="switch" data-i18n-title="rumble.holdTitle">
+              <input type="checkbox" id="rumbleHold"> <span data-i18n="rumble.hold"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 data-i18n="hap.head"></h2>
+          <span class="chip mono">ch3 / ch4</span>
+        </div>
+        <div class="panel-body" style="display:grid; gap:14px">
+          <p class="note" data-i18n-html="hap.desc"></p>
+          <div class="row">
+            <button type="button" class="btn" id="hapPrep" data-i18n="hap.prep"></button>
+            <span class="status" id="hapStatus"></span>
+          </div>
+          <div class="params">
+            <div class="param">
+              <label for="hapWave" data-i18n="hap.wave"></label>
+              <select id="hapWave">
+                <option value="sine" data-i18n="hap.sine"></option>
+                <option value="square" data-i18n="hap.square"></option>
+                <option value="triangle" data-i18n="hap.triangle"></option>
+                <option value="sawtooth" data-i18n="hap.sawtooth"></option>
+              </select>
+            </div>
+            <div class="param">
+              <label for="hapPattern" data-i18n="hap.pattern"></label>
+              <select id="hapPattern">
+                <option value="tone" data-i18n="hap.tone"></option>
+                <option value="pulse" data-i18n="hap.pulse"></option>
+                <option value="sweep" data-i18n="hap.sweep"></option>
+                <option value="click" data-i18n="hap.click"></option>
+              </select>
+            </div>
+            <div class="param">
+              <label for="hapFreq" data-i18n="hap.freq"></label>
+              <input type="range" id="hapFreq" min="10" max="500" step="5" value="160">
+              <output id="hapFreqOut">160</output>
+              <span class="hint">Hz</span>
+            </div>
+            <div class="param">
+              <label for="hapAmp" data-i18n="hap.amp"></label>
+              <input type="range" id="hapAmp" min="0" max="100" step="1" value="50">
+              <output id="hapAmpOut">50</output>
+              <span class="hint">%</span>
+            </div>
+            <div class="param">
+              <label for="hapDur" data-i18n="hap.dur"></label>
+              <input type="range" id="hapDur" min="100" max="3000" step="100" value="1000">
+              <output id="hapDurOut">1000</output>
+              <span class="hint">ms</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="seg" role="group" data-i18n-aria="hap.head">
+              <button type="button" id="hapL" aria-pressed="false" data-i18n="hap.L" disabled></button>
+              <button type="button" id="hapR" aria-pressed="false" data-i18n="hap.R" disabled></button>
+              <button type="button" id="hapB" aria-pressed="false" data-i18n="hap.B" disabled></button>
+            </div>
+            <button type="button" class="btn" id="hapStop" data-i18n="hap.stop" disabled></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
           <h2 data-i18n="log.head"></h2>
           <span class="chip mono" id="reportChip">—</span>
         </div>
