@@ -54,6 +54,18 @@ Metro Exodus の出力を usbpcap で観察し、試行錯誤によって割り�
 
 Referenced to confirm the output report structure. No code was taken from it.
 
+### PeaSyo `RazerKishiController.java`（AGPL-3.0）
+
+`src/kishi/report.ts` にある Razer Kishi のハプティック用フレームの形
+（インターフェース 3、64 バイトのフレーム、ヘッダー、4 kHz ステレオ S16LE、XOR チェックサム、
+Feature レポートの値）を確認するために参照しました。事実だけを読み取ってコードは独自に書いており、
+PeaSyo のコードは取り込んでいません。
+
+Referenced for the Razer Kishi haptic frame layout used in `src/kishi/report.ts`.
+Only facts were taken; no PeaSyo code is included.
+
+- 出典 / Source: https://github.com/Geocld/PeaSyo/blob/master/android/app/src/main/java/com/peasyo/input/RazerKishiController.java
+
 ## 実行時に読み込むもの / Loaded at runtime
 
 - Google Fonts 経由の Chakra Petch / IBM Plex Mono / Noto Sans JP

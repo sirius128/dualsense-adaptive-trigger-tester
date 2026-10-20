@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check": "bun scripts/check-effects.ts"
+    "check": "bun scripts/check-effects.ts && bun scripts/check-kishi.ts"
   },
   "devDependencies": {
     "@types/w3c-web-hid": "^1.0.7",

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kishi ハプティック試作</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<script type="module" src="/src/kishi/main.ts"></script>
+</head>
+<body>
+
+<!-- 試作ページ。開発サーバでだけ開ける（ビルドには含めない） / dev-server only prototype -->
+<div class="wrap head">
+  <header class="masthead">
+    <div>
+      <div class="eyebrow">Razer Kishi · Haptics · Prototype</div>
+      <h1>Kishi ハプティック試作</h1>
+      <p class="sub">
+        WebHID で Kishi のハプティック用インターフェースを開き、4 kHz の PCM を 64 バイトのフレームで送ります。
+        対象は Kishi V3 / V3 Pro / Ultra です。V3 Pro XL は別のプロトコルなので動きません。
+      </p>
+    </div>
+  </header>
+</div>
+
+<div class="wrap body" style="display:grid; gap:18px">
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>1. 接続</h2>
+      <span class="chip mono" id="kPid">—</span>
+    </div>
+    <div class="panel-body" style="display:grid; gap:14px">
+      <div class="row">
+        <button type="button" class="btn primary" id="kConnect">Kishi を接続</button>
+        <span class="conn"><span class="dot" id="kDot"></span><span id="kStatus">未接続</span></span>
+      </div>
+      <div class="params">
+        <div class="param">
+          <label for="kIface">送信先</label>
+          <select id="kIface" disabled></select>
+          <span></span>
+        </div>
+      </div>
+      <p class="note">
+        ダイアログには Kishi のインターフェースがまとめて出ます。64 バイトの出力レポートを持つものを自動で選びます。
+        どれも出てこないときは、Kishi が XInput モードになっていて HID として見えていない可能性があります。
+      </p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>2. 振動子の設定</h2>
+      <span class="chip mono">Feature report</span>
+    </div>
+    <div class="panel-body" style="display:grid; gap:14px">
+      <div class="row">
+        <button type="button" class="btn" id="kOn" disabled>ON</button>
+        <button type="button" class="btn" id="kOff" disabled>OFF</button>
+        <span class="step-label">強さ</span>
+        <div class="seg" id="kLevel" role="group" aria-label="強さ">
+          <button type="button" data-level="low" aria-pressed="false" disabled>LOW</button>
+          <button type="button" data-level="medium" aria-pressed="false" disabled>MEDIUM</button>
+          <button type="button" data-level="high" aria-pressed="false" disabled>HIGH</button>
+        </div>
+      </div>
+      <div class="row">
+        <span class="step-label">値を直接送る</span>
+        <input type="number" id="kRaw" min="0" max="255" value="100" style="width:80px">
+        <button type="button" class="btn" id="kRawSend" disabled>左右に送る</button>
+        <span class="status" id="kRawHex"></span>
+      </div>
+      <p class="note">
+        ON は値 1、OFF は値 0、強さは LOW = 0x21 / MEDIUM = 0x42 / HIGH = 0x64 を、左（1）と右（2）にそれぞれ送ります。
+        PeaSyo はどれも同じ形 <code>00 振動子 値</code> で送っていて、値の意味の違いは実機で確かめる必要があります。
+      </p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>3. ハプティックテスト</h2>
+      <span class="chip mono">4 kHz · S16LE · stereo</span>
+    </div>
+    <div class="panel-body" style="display:grid; gap:14px">
+      <div class="params">
+        <div class="param">
+          <label for="kWave">波形</label>
+          <select id="kWave">
+            <option value="sine">サイン波</option>
+            <option value="square">矩形波</option>
+            <option value="triangle">三角波</option>
+            <option value="sawtooth">ノコギリ波</option>
+          </select>
+          <span></span>
+        </div>
+        <div class="param">
+          <label for="kPattern">パターン</label>
+          <select id="kPattern">
+            <option value="tone">連続</option>
+            <option value="pulse">断続（60 ms ごと）</option>
+            <option value="sweep">スイープ（20 → 400 Hz）</option>
+            <option value="click">クリック 1 回</option>
+          </select>
+          <span></span>
+        </div>
+        <div class="param">
+          <label for="kFreq">周波数</label>
+          <input type="range" id="kFreq" min="10" max="500" step="5" value="160">
+          <output id="kFreqOut">160</output>
+          <span class="hint">Hz</span>
+        </div>
+        <div class="param">
+          <label for="kAmp">振幅</label>
+          <input type="range" id="kAmp" min="0" max="100" step="1" value="50">
+          <output id="kAmpOut">50</output>
+          <span class="hint">%</span>
+        </div>
+        <div class="param">
+          <label for="kDur">長さ</label>
+          <input type="range" id="kDur" min="100" max="3000" step="100" value="1000">
+          <output id="kDurOut">1000</output>
+          <span class="hint">ms</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="seg" role="group" aria-label="ハプティックテスト">
+          <button type="button" id="kPlayL" aria-pressed="false" disabled>左の振動子</button>
+          <button type="button" id="kPlayR" aria-pressed="false" disabled>右の振動子</button>
+          <button type="button" id="kPlayB" aria-pressed="false" disabled>両方</button>
+        </div>
+        <button type="button" class="btn" id="kStop" disabled>停止</button>
+      </div>
+      <p class="note">振動子が OFF のままなら、鳴らす前に自動で ON と HIGH を送ります。</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>4. 送信状況</h2>
+      <span class="chip mono" id="kRun">停止中</span>
+    </div>
+    <div class="panel-body" style="display:grid; gap:10px">
+      <pre class="code" id="kStats">—</pre>
+      <pre class="code" id="kFrame">—</pre>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>ログ</h2>
+    </div>
+    <div class="panel-body">
+      <pre class="code" id="kLog"></pre>
+    </div>
+  </section>
+</div>
+
+</body>
+</html>

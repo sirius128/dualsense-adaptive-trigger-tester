@@ -49,10 +49,13 @@ GitHub Pages にそのまま置けますし、保存してオフラインで開�
 ```sh
 bun install        # npm install / pnpm install でも可
 bun run dev        # 開発サーバ
-bun run check      # エフェクト表のバイト列が変わっていないかを検査
+bun run check      # エフェクト表と Kishi フレームのバイト列が変わっていないかを検査
 bun run build      # tsc --noEmit のあと dist/index.html を生成
 bun run preview    # ビルド結果を確認
 ```
+
+Razer Kishi（V3 / V3 Pro / Ultra）のハプティック試作は、開発サーバで
+`http://localhost:5173/kishi.html` を開いて試せます（ビルドには含めていません）。
 
 `bun run check` は Bun で TypeScript を直接実行します。npm だけの環境では
 `bun run build`（型検査を含む）が主な検証手段になります。
@@ -77,6 +80,11 @@ src/
   hid.ts              WebHID での送信、ログ、ドックの状態
   haptics.ts          USB 音声（ch3 / ch4）でのハプティック再生
   gamepad.ts          Gamepad API でのトリガー読み取り
+  waveform.ts         ハプティック用の波形を PCM で作る（Kishi 試作で使用）
+  kishi/              Razer Kishi ハプティックの試作（kishi.html から使う）
+    report.ts         64 バイトのフレームと Feature レポートの組み立て
+    stream.ts         4 kHz に合わせたフレーム送信
+    main.ts           試作ページの画面
   styles/app.css
 scripts/check-effects.ts   バイト列の回帰チェック
 ```
