@@ -245,7 +245,7 @@ function paintStats(s: StreamStats): void {
   }
 }
 
-const stream = new KishiStream(sendFrame, paintStats);
+const stream = new KishiStream(sendFrame, paintStats, log);
 
 /* ---- 起動 / boot ---- */
 function init(): void {

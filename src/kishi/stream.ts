@@ -51,6 +51,8 @@ export class KishiStream {
   constructor(
     private readonly send: (frame: Bytes) => Promise<void>,
     private readonly onStats: (s: StreamStats) => void,
+    /** 打ち切った書き込みが後でどうなったか / what became of a write we gave up on */
+    private readonly note: (msg: string) => void = () => undefined,
   ) {}
 
   private static emptyStats(): StreamStats {
@@ -93,8 +95,9 @@ export class KishiStream {
         s.dropped++;
         continue;
       }
+      const pending = this.send(frames[i]!);
       try {
-        await withTimeout(this.send(frames[i]!), SEND_TIMEOUT_MS);
+        await withTimeout(pending, SEND_TIMEOUT_MS);
         s.sent++;
         s.lastFrame = frames[i]!;
         s.maxLateMs = Math.max(s.maxLateMs, late);
@@ -102,7 +105,15 @@ export class KishiStream {
         s.failed++;
         s.lastError = err instanceof Error ? err.message : String(err);
         // 返ってこない書き込みを積み上げないよう、ここで打ち切る / don't pile up stalled writes
-        if (err instanceof Stalled) break;
+        if (err instanceof Stalled) {
+          const t0 = performance.now() - SEND_TIMEOUT_MS;
+          const after = (): string => `${Math.round(performance.now() - t0)} ms`;
+          pending.then(
+            () => this.note(`止まっていた書き込みが ${after()} 後に完了 / stalled write completed`),
+            (e: unknown) => this.note(`止まっていた書き込みが ${after()} 後に失敗: ${String(e)}`),
+          );
+          break;
+        }
       }
 
       const now = performance.now();
