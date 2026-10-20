@@ -8,7 +8,7 @@ import { $ } from "../dom";
 import type { Bytes } from "../types";
 import { renderWave } from "../waveform";
 import type { Pattern, Wave } from "../waveform";
-import { ACTUATORS, FRAME_BYTES, KISHI_PIDS, LEVELS, NO_PCM_PIDS, RAZER, SAMPLE_RATE, command, packFrames } from "./report";
+import { ACTUATORS, FEATURE_BYTES, FRAME_BYTES, KISHI_PIDS, LEVELS, NO_PCM_PIDS, RAZER, SAMPLE_RATE, command, packFrames } from "./report";
 import { KishiStream } from "./stream";
 import type { StreamStats } from "./stream";
 
@@ -71,17 +71,16 @@ function isHapticInterface(dev: HIDDevice): boolean {
 
 /**
  * Feature レポートを記述子どおりの長さに 0 で埋める。Windows は長さが合わないと失敗するので、
- * PeaSyo の 3 バイト（先頭の 00 も中身）を 90 バイトにして送る。長さが分からなければそのまま。
+ * PeaSyo の 3 バイト（先頭の 00 も中身）を 90 バイトにして送る。
+ * Chrome が Feature を collections に出さないときは FEATURE_BYTES を使う。
  *
- * Pad to the descriptor's feature length; Windows rejects a short buffer.
+ * Pad to the feature length; Windows rejects a short buffer.
  */
 function featureData(dev: HIDDevice, data: Bytes): Bytes {
-  const len = Math.max(
-    0,
-    ...(dev.collections ?? []).flatMap((c) =>
-      (c.featureReports ?? []).filter((r) => (r.reportId ?? 0) === 0).map(reportBytes),
-    ),
+  const listed = (dev.collections ?? []).flatMap((c) =>
+    (c.featureReports ?? []).filter((r) => (r.reportId ?? 0) === 0).map(reportBytes),
   );
+  const len = listed.length ? Math.max(...listed) : FEATURE_BYTES;
   if (len <= data.length) return data;
   const out = new Uint8Array(len);
   out.set(data);
@@ -169,12 +168,13 @@ async function sendCommand(value: number, label: string): Promise<boolean> {
   let ok = true;
   for (const a of ACTUATORS) {
     const data = command(a, value);
+    const sent = featureData(target, data);
     try {
-      await target.sendFeatureReport(0, featureData(target, data));
-      log(`${label} → ${a === 1 ? "左" : "右"}: ${hex(data)}`);
+      await target.sendFeatureReport(0, sent);
+      log(`${label} → ${a === 1 ? "左" : "右"}: ${hex(data)}（${sent.length} バイト）`);
     } catch (err) {
       ok = false;
-      log(`${label} 失敗（${a === 1 ? "左" : "右"}、${hex(data)}）: ${err instanceof Error ? err.message : String(err)}`);
+      log(`${label} 失敗（${a === 1 ? "左" : "右"}、${hex(data)}、${sent.length} バイト）: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   return ok;

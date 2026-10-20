@@ -39,6 +39,15 @@ const CHECKSUM_AT = PAYLOAD_AT + PAYLOAD_BYTES; // 58。残り 5 バイトは 0 
 export type Actuator = 1 | 2;
 export const ACTUATORS: readonly Actuator[] = [1, 2];
 
+/**
+ * インターフェース 3 の Feature レポートの長さ（レポート ID なし）。Windows の HidP_GetCaps で 91（ID の 1 バイト込み）。
+ * Chrome はこの Feature を collections に出さないので、長さはここで持つ。
+ * Windows は長さが合わない Feature の送信を拒否する。
+ *
+ * Feature length on interface 3 (91 incl. the ID byte on Windows). Chrome does not list it.
+ */
+export const FEATURE_BYTES = 90;
+
 /** PeaSyo が使っている強さの段階 / the strength steps PeaSyo uses */
 export const LEVELS = { low: 0x21, medium: 0x42, high: 0x64 } as const;
 

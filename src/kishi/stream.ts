@@ -16,6 +16,8 @@ const LEAD_MS = 6;
 const MAX_LATE_MS = 50;
 /** 終わりに無音を足して、振動子を確実に止める / trailing silence so the actuators settle */
 const TAIL_FRAMES = 2;
+/** 送信がこれだけ返ってこなければ、受け側が止まっているとみなして打ち切る / give up on a stalled write */
+const SEND_TIMEOUT_MS = 500;
 
 export interface StreamStats {
   sent: number;
@@ -31,6 +33,16 @@ export interface StreamStats {
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+class Stalled extends Error {}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer = 0;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Stalled(`${ms} ms 以内に送信が終わらない / write stalled`)), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
 
 export class KishiStream {
   private token = 0;
@@ -82,13 +94,15 @@ export class KishiStream {
         continue;
       }
       try {
-        await this.send(frames[i]!);
+        await withTimeout(this.send(frames[i]!), SEND_TIMEOUT_MS);
         s.sent++;
         s.lastFrame = frames[i]!;
         s.maxLateMs = Math.max(s.maxLateMs, late);
       } catch (err) {
         s.failed++;
         s.lastError = err instanceof Error ? err.message : String(err);
+        // 返ってこない書き込みを積み上げないよう、ここで打ち切る / don't pile up stalled writes
+        if (err instanceof Stalled) break;
       }
 
       const now = performance.now();
